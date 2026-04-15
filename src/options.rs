@@ -61,6 +61,8 @@ pub enum LayoutMode {
     OnePerLine,
     /// Long listing (`-l` / `--format=long`).
     Long,
+    /// Tree view with optional max depth.
+    Tree { depth: Option<usize> },
 }
 
 #[derive(Debug, Clone, Copy, Default)]

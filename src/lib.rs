@@ -71,6 +71,26 @@ fn render_path(
         None
     };
 
+    if let options::LayoutMode::Tree { depth } = opts.layout {
+        let builder = render::CellBuilder {
+            theme,
+            icons,
+            color_mode: opts.color_mode,
+            show_icons: opts.show_icons,
+        };
+        render::tree::render(
+            path,
+            depth,
+            &opts.filter,
+            opts.sort,
+            &builder,
+            theme,
+            opts.color_mode,
+            out,
+        )?;
+        return Ok(());
+    }
+
     if matches!(opts.layout, options::LayoutMode::Long) {
         let (counts, _) = render::long::render(
             &sorted,
@@ -107,7 +127,9 @@ fn render_path(
             let w = terminal_width(out);
             render::grid::render_grid(&cells, w, render::grid::GridKind::Horizontal, out)?;
         }
-        options::LayoutMode::Long => unreachable!("handled above"),
+        options::LayoutMode::Long | options::LayoutMode::Tree { .. } => {
+            unreachable!("handled above")
+        }
     }
     Ok(())
 }

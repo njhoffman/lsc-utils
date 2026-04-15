@@ -2,6 +2,7 @@ pub mod cell;
 pub mod grid;
 pub mod long;
 pub mod one_per_line;
+pub mod tree;
 pub mod width;
 
 pub use cell::{build_cells, Cell, CellBuilder};

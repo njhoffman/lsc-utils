@@ -175,6 +175,14 @@ pub struct Args {
     /// Show git status for each entry
     #[arg(long = "gs", visible_alias = "git-status")]
     pub git_status: bool,
+
+    /// Show tree view; optional max depth (e.g. --tree=2)
+    #[arg(long = "tree", value_name = "DEPTH", num_args = 0..=1, default_missing_value = "0")]
+    pub tree: Option<usize>,
+
+    /// Follow symbolic links when listing
+    #[arg(short = 'L')]
+    pub follow_symlinks: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -314,6 +322,12 @@ fn resolve_sort(a: &Args) -> Result<SortSpec> {
 }
 
 fn resolve_layout(a: &Args) -> Result<LayoutMode> {
+    if let Some(d) = a.tree {
+        // `--tree` (bare) maps to depth=None (unbounded); `--tree=N` to Some(N).
+        // We use 0 as the "bare flag" sentinel from default_missing_value.
+        let depth = if d == 0 { None } else { Some(d) };
+        return Ok(LayoutMode::Tree { depth });
+    }
     if a.long {
         return Ok(LayoutMode::Long);
     }
