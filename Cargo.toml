@@ -2,7 +2,7 @@
 name = "lsc-utils"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.82"
 license = "MIT"
 description = "Modern, fast Rust ls-color utilities (colorls-compatible)"
 repository = "https://github.com/njhoffman/lsc-utils"
