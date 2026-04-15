@@ -10,17 +10,24 @@ use anyhow::{anyhow, Result};
 use clap::{Parser, ValueEnum};
 
 use crate::config::{ActiveTheme, ColorMode};
-use crate::options::{Filter, LayoutMode, RunOptions};
+use crate::options::{Filter, IndicatorStyle, LayoutMode, LongOptions, RunOptions};
+use crate::util::report::ReportKind;
+use crate::util::time_fmt::TimeStyle;
 
 #[derive(Debug, Parser)]
 #[command(
     name = "lsc",
     version,
     about = "Modern, fast Rust ls-color (colorls-compatible)",
-    disable_help_flag = false,
-    disable_version_flag = false
+    // colorls binds `-h` to --human-readable for ls compatibility. Drop
+    // clap's auto `-h`-as-help; `--help` (long form) still works.
+    disable_help_flag = true,
 )]
 pub struct Args {
+    /// Print help
+    #[arg(long = "help", action = clap::ArgAction::Help)]
+    pub _help: Option<bool>,
+
     /// Paths to list. Defaults to the current directory.
     pub paths: Vec<PathBuf>,
 
@@ -71,6 +78,55 @@ pub struct Args {
     /// Hide nerd-font icons
     #[arg(long = "without-icons")]
     pub without_icons: bool,
+
+    /// Long listing format with mode/links/user/group/size/time
+    #[arg(short = 'l', long = "long", conflicts_with_all = ["one_per_line", "horizontal", "vertical", "format"])]
+    pub long: bool,
+
+    /// Long listing without group (alias for --no-group)
+    #[arg(short = 'o')]
+    pub no_group_o: bool,
+
+    /// Long listing without owner
+    #[arg(short = 'g')]
+    pub no_owner: bool,
+
+    /// Suppress group column in long listing
+    #[arg(short = 'G', long = "no-group")]
+    pub no_group: bool,
+
+    /// Hide hard-link count in long listing
+    #[arg(long = "no-hardlinks")]
+    pub no_hardlinks: bool,
+
+    /// Show file sizes in raw bytes (disables human-readable units)
+    #[arg(long = "non-human-readable")]
+    pub non_human_readable: bool,
+
+    /// Show inode number
+    #[arg(short = 'i', long = "inode")]
+    pub inode: bool,
+
+    /// mtime format. `+FORMAT` is a strftime pattern; otherwise asctime.
+    #[arg(long = "time-style", value_name = "FORMAT")]
+    pub time_style: Option<String>,
+
+    /// Show summary report (`short` or `long`; bare flag = `short`).
+    #[arg(long = "report", value_name = "WORD", num_args = 0..=1, default_missing_value = "short")]
+    pub report: Option<String>,
+
+    /// Append `/` to directories (shorthand for `--indicator-style=slash`).
+    #[arg(short = 'p')]
+    pub indicator_p: bool,
+
+    /// Indicator style: `none` or `slash`.
+    #[arg(long = "indicator-style", value_name = "STYLE", num_args = 0..=1, default_missing_value = "slash")]
+    pub indicator_style: Option<String>,
+
+    /// Always show file sizes in human-readable form (no-op; kept for ls
+    /// compatibility, since lsc is human-readable by default).
+    #[arg(short = 'h', long = "human-readable", hide = true)]
+    pub _human: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -113,6 +169,41 @@ impl Args {
         } else {
             self.paths
         };
+        let long = LongOptions {
+            time_style: self
+                .time_style
+                .as_deref()
+                .map(TimeStyle::parse)
+                .unwrap_or_default(),
+            // -g hides owner; -o, -G/--no-group hide group.
+            show_owner: !self.no_owner,
+            show_group: !(self.no_group || self.no_group_o),
+            show_hardlinks: !self.no_hardlinks,
+            show_inode: self.inode,
+            human_readable: !self.non_human_readable,
+        };
+        let report = match self.report.as_deref() {
+            None => None,
+            Some("short") => Some(ReportKind::Short),
+            Some("long") => Some(ReportKind::Long),
+            Some(other) => {
+                return Err(anyhow!(
+                    "--report: expected `short` or `long`, got `{other}`"
+                ))
+            }
+        };
+        // Default style is `slash`. `-p` is a colorls-/ls-compat alias for it
+        // and is a no-op when no other indicator style is requested.
+        let _ = self.indicator_p;
+        let indicator = match self.indicator_style.as_deref() {
+            None | Some("slash") => IndicatorStyle::Slash,
+            Some("none") => IndicatorStyle::None,
+            Some(other) => {
+                return Err(anyhow!(
+                    "--indicator-style: expected `none` or `slash`, got `{other}`"
+                ))
+            }
+        };
         Ok(RunOptions {
             paths,
             layout,
@@ -125,11 +216,17 @@ impl Args {
             show_icons: !self.without_icons,
             theme,
             color_mode,
+            long,
+            report,
+            indicator,
         })
     }
 }
 
 fn resolve_layout(a: &Args) -> Result<LayoutMode> {
+    if a.long {
+        return Ok(LayoutMode::Long);
+    }
     if a.one_per_line {
         return Ok(LayoutMode::OnePerLine);
     }
@@ -144,13 +241,7 @@ fn resolve_layout(a: &Args) -> Result<LayoutMode> {
             FormatArg::Across | FormatArg::Horizontal => LayoutMode::Horizontal,
             FormatArg::Vertical => LayoutMode::Vertical,
             FormatArg::SingleColumn => LayoutMode::OnePerLine,
-            // Long lands in step 5; reject explicitly until then so the user
-            // gets a clear error instead of a silent fallback.
-            FormatArg::Long => {
-                return Err(anyhow!(
-                    "--format=long / -l: long mode not yet implemented (step 5)"
-                ))
-            }
+            FormatArg::Long => LayoutMode::Long,
         });
     }
     Ok(if std::io::IsTerminal::is_terminal(&std::io::stdout()) {
@@ -208,9 +299,71 @@ mod tests {
     }
 
     #[test]
-    fn format_long_errors_until_step_5() {
-        let err = parse(&["--format=long"]).resolve().unwrap_err();
-        assert!(err.to_string().contains("step 5"));
+    fn long_flag_resolves() {
+        let opts = parse(&["-l"]).resolve().unwrap();
+        assert_eq!(opts.layout, LayoutMode::Long);
+    }
+
+    #[test]
+    fn format_long_resolves() {
+        let opts = parse(&["--format=long"]).resolve().unwrap();
+        assert_eq!(opts.layout, LayoutMode::Long);
+    }
+
+    #[test]
+    fn long_flag_conflicts_with_one_per_line() {
+        assert!(Args::try_parse_from(["lsc", "-l", "-1"]).is_err());
+    }
+
+    #[test]
+    fn no_owner_no_group_flags_propagate() {
+        let opts = parse(&["-l", "-g", "-G"]).resolve().unwrap();
+        assert!(!opts.long.show_owner);
+        assert!(!opts.long.show_group);
+    }
+
+    #[test]
+    fn inode_flag() {
+        let opts = parse(&["-l", "-i"]).resolve().unwrap();
+        assert!(opts.long.show_inode);
+    }
+
+    #[test]
+    fn non_human_readable_flag() {
+        let opts = parse(&["-l", "--non-human-readable"]).resolve().unwrap();
+        assert!(!opts.long.human_readable);
+    }
+
+    #[test]
+    fn time_style_plus_prefix() {
+        let opts = parse(&["-l", "--time-style=+%F %T"]).resolve().unwrap();
+        match opts.long.time_style {
+            crate::util::time_fmt::TimeStyle::Custom(s) => assert_eq!(s, "%F %T"),
+            _ => panic!("expected Custom"),
+        }
+    }
+
+    #[test]
+    fn report_short_default_when_bare() {
+        let opts = parse(&["--report"]).resolve().unwrap();
+        assert_eq!(opts.report, Some(ReportKind::Short));
+    }
+
+    #[test]
+    fn report_long_explicit() {
+        let opts = parse(&["--report=long"]).resolve().unwrap();
+        assert_eq!(opts.report, Some(ReportKind::Long));
+    }
+
+    #[test]
+    fn report_invalid_value_errors() {
+        assert!(parse(&["--report=garbage"]).resolve().is_err());
+    }
+
+    #[test]
+    fn indicator_style_none() {
+        let opts = parse(&["--indicator-style=none"]).resolve().unwrap();
+        assert_eq!(opts.indicator, IndicatorStyle::None);
     }
 
     #[test]

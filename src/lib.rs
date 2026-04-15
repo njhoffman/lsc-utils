@@ -9,6 +9,7 @@ pub mod config;
 pub mod fs;
 pub mod options;
 pub mod render;
+pub mod util;
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 const FALLBACK_TERMINAL_WIDTH: usize = 80;
@@ -65,6 +66,23 @@ fn render_path(
     let mut sorted = entries;
     sorted.sort_by(|a, b| a.name.cmp(&b.name));
 
+    if matches!(opts.layout, options::LayoutMode::Long) {
+        let (counts, _) = render::long::render(
+            &sorted,
+            theme,
+            icons,
+            opts.color_mode,
+            opts.show_icons,
+            &opts.long,
+            out,
+        )?;
+        if let Some(kind) = opts.report {
+            let txt = render::long::render_report(&counts, kind, theme, opts.color_mode);
+            out.write_all(txt.as_bytes())?;
+        }
+        return Ok(());
+    }
+
     let builder = render::CellBuilder {
         theme,
         icons,
@@ -83,6 +101,7 @@ fn render_path(
             let w = terminal_width(out);
             render::grid::render_grid(&cells, w, render::grid::GridKind::Horizontal, out)?;
         }
+        options::LayoutMode::Long => unreachable!("handled above"),
     }
     Ok(())
 }

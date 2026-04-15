@@ -1,5 +1,6 @@
 pub mod cell;
 pub mod grid;
+pub mod long;
 pub mod one_per_line;
 pub mod width;
 

@@ -7,6 +7,8 @@
 use std::path::PathBuf;
 
 use crate::config::{ActiveTheme, ColorMode};
+use crate::util::report::ReportKind;
+use crate::util::time_fmt::TimeStyle;
 
 #[derive(Debug, Clone)]
 pub struct RunOptions {
@@ -16,6 +18,9 @@ pub struct RunOptions {
     pub show_icons: bool,
     pub theme: ActiveTheme,
     pub color_mode: ColorMode,
+    pub long: LongOptions,
+    pub report: Option<ReportKind>,
+    pub indicator: IndicatorStyle,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -26,6 +31,8 @@ pub enum LayoutMode {
     Horizontal,
     /// One entry per line. Default when stdout is not a TTY.
     OnePerLine,
+    /// Long listing (`-l` / `--format=long`).
+    Long,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -38,4 +45,37 @@ pub struct Filter {
     pub only_dirs: bool,
     /// `-f` / `--files`: only files
     pub only_files: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct LongOptions {
+    pub time_style: TimeStyle,
+    /// `-g` hides owner; `-G`/`--no-group` and `-o` hide group.
+    pub show_owner: bool,
+    pub show_group: bool,
+    pub show_hardlinks: bool,
+    pub show_inode: bool,
+    pub human_readable: bool,
+}
+
+impl Default for LongOptions {
+    fn default() -> Self {
+        Self {
+            time_style: TimeStyle::default(),
+            show_owner: true,
+            show_group: true,
+            show_hardlinks: true,
+            show_inode: false,
+            human_readable: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum IndicatorStyle {
+    /// No trailing indicator.
+    None,
+    /// `/` after directories.
+    #[default]
+    Slash,
 }
