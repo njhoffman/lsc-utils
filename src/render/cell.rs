@@ -2,6 +2,8 @@
 
 use crate::config::{ColorMode, IconKind, Icons, Theme};
 use crate::fs::{EntryKind, FileEntry};
+use crate::options::{HyperlinkMode, IndicatorStyle};
+use crate::render::hyperlink;
 use crate::render::width::display_width;
 
 /// A renderable cell with its measured display width pre-computed.
@@ -19,16 +21,22 @@ pub struct CellBuilder<'a> {
     pub icons: &'a Icons,
     pub color_mode: ColorMode,
     pub show_icons: bool,
+    pub indicator: IndicatorStyle,
+    pub hyperlink: HyperlinkMode,
 }
 
 impl<'a> CellBuilder<'a> {
     pub fn build(&self, entry: &FileEntry) -> Cell {
-        let name = entry.name_lossy().into_owned();
+        let mut name = entry.name_lossy().into_owned();
         let (icon_glyph, color_key) = self.resolve(entry);
 
-        // Text width starts with the visible name. Add 2 (icon glyph display
-        // width) + 2 (separator spaces) when icons are on, mirroring colorls's
-        // `"#{logo}  #{name}"` formatting.
+        // Append `/` to directories under IndicatorStyle::Slash (matches
+        // colorls and `ls -p`). Symlinks-to-dirs follow the symlink kind, not
+        // the target kind — colorls behaves the same.
+        if entry.is_dir() && self.indicator == IndicatorStyle::Slash {
+            name.push('/');
+        }
+
         let mut visible_width = display_width(&name);
         let mut text = String::new();
         if self.show_icons {
@@ -37,7 +45,9 @@ impl<'a> CellBuilder<'a> {
             text.push_str("  ");
             visible_width += 2 + 2;
         }
-        text.push_str(&self.theme.paint(&color_key, &name, self.color_mode));
+        let painted_name = self.theme.paint(&color_key, &name, self.color_mode);
+        let wrapped = hyperlink::wrap(&painted_name, &entry.path, self.hyperlink);
+        text.push_str(&wrapped);
 
         Cell {
             text,
@@ -112,6 +122,8 @@ mod tests {
             icons,
             color_mode: mode,
             show_icons,
+            indicator: IndicatorStyle::None,
+            hyperlink: HyperlinkMode::Off,
         }
     }
 

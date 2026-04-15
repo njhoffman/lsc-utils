@@ -156,6 +156,8 @@ mod tests {
             icons,
             color_mode: ColorMode::Never,
             show_icons: false,
+            indicator: crate::options::IndicatorStyle::None,
+            hyperlink: crate::options::HyperlinkMode::Off,
         };
         let mut buf = Vec::new();
         render(

@@ -43,7 +43,13 @@ fn one_per_line_lists_visible_entries() {
 fn all_flag_includes_dotfile_dot_dotdot() {
     let tmp = fixture();
     let assert = lsc()
-        .args(["-a", "-1", "--color=never", "--without-icons"])
+        .args([
+            "-a",
+            "-1",
+            "--color=never",
+            "--without-icons",
+            "--indicator-style=none",
+        ])
         .arg(tmp.path())
         .assert()
         .success();
@@ -57,6 +63,42 @@ fn all_flag_includes_dotfile_dot_dotdot() {
         lines.contains(&".dotfile"),
         "missing `.dotfile` in {lines:?}"
     );
+}
+
+#[test]
+fn slash_indicator_appended_to_directories() {
+    let tmp = fixture();
+    let out = lsc()
+        .args(["-1", "--color=never", "--without-icons"])
+        .arg(tmp.path())
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let s = String::from_utf8(out).unwrap();
+    assert!(s.contains("subdir/"), "expected subdir/ in {s:?}");
+    assert!(!s.contains("alpha.txt/"));
+}
+
+#[test]
+fn hyperlink_always_emits_osc8() {
+    let tmp = fixture();
+    let out = lsc()
+        .args([
+            "-1",
+            "--color=never",
+            "--without-icons",
+            "--hyperlink=always",
+        ])
+        .arg(tmp.path())
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let s = String::from_utf8(out).unwrap();
+    assert!(s.contains("\x1b]8;;file://"), "expected OSC-8 in {s:?}");
 }
 
 #[test]

@@ -77,6 +77,8 @@ fn render_path(
             icons,
             color_mode: opts.color_mode,
             show_icons: opts.show_icons,
+            indicator: opts.indicator,
+            hyperlink: opts.hyperlink,
         };
         render::tree::render(
             path,
@@ -114,6 +116,8 @@ fn render_path(
         icons,
         color_mode: opts.color_mode,
         show_icons: opts.show_icons,
+        indicator: opts.indicator,
+        hyperlink: opts.hyperlink,
     };
     let cells = render::build_cells(&sorted, &builder);
 

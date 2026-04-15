@@ -11,7 +11,8 @@ use clap::{Parser, ValueEnum};
 
 use crate::config::{ActiveTheme, ColorMode};
 use crate::options::{
-    Filter, Group, IndicatorStyle, LayoutMode, LongOptions, RunOptions, SortKey, SortSpec,
+    Filter, Group, HyperlinkMode, IndicatorStyle, LayoutMode, LongOptions, RunOptions, SortKey,
+    SortSpec,
 };
 use crate::util::report::ReportKind;
 use crate::util::time_fmt::TimeStyle;
@@ -183,6 +184,10 @@ pub struct Args {
     /// Follow symbolic links when listing
     #[arg(short = 'L')]
     pub follow_symlinks: bool,
+
+    /// Emit OSC-8 hyperlinks: always, auto, or never (bare flag = always).
+    #[arg(long = "hyperlink", value_name = "WHEN", num_args = 0..=1, default_missing_value = "always")]
+    pub hyperlink: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -278,6 +283,17 @@ impl Args {
             report,
             indicator,
             git_status: self.git_status,
+            hyperlink: match self.hyperlink.as_deref() {
+                None => HyperlinkMode::Off,
+                Some("always") => HyperlinkMode::Always,
+                Some("auto") => HyperlinkMode::Auto,
+                Some("never") => HyperlinkMode::Never,
+                Some(other) => {
+                    return Err(anyhow!(
+                        "--hyperlink: expected always|auto|never, got `{other}`"
+                    ))
+                }
+            },
         })
     }
 }

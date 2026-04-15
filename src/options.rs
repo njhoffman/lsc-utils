@@ -23,6 +23,16 @@ pub struct RunOptions {
     pub report: Option<ReportKind>,
     pub indicator: IndicatorStyle,
     pub git_status: bool,
+    pub hyperlink: HyperlinkMode,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum HyperlinkMode {
+    #[default]
+    Off,
+    Auto,
+    Always,
+    Never,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
