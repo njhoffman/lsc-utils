@@ -1,0 +1,55 @@
+[package]
+name = "lsc-utils"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"
+description = "Modern, fast Rust ls-color utilities (colorls-compatible)"
+repository = "https://github.com/njhoffman/lsc-utils"
+readme = "README.md"
+categories = ["command-line-utilities", "filesystem"]
+keywords = ["ls", "colorls", "cli", "terminal", "files"]
+
+[[bin]]
+name = "lsc"
+path = "src/main.rs"
+
+[lib]
+name = "lsc_utils"
+path = "src/lib.rs"
+
+[dependencies]
+clap                 = { version = "4.5", features = ["derive", "wrap_help"] }
+serde                = { version = "1", features = ["derive"] }
+serde_yml            = "0.0.12"
+owo-colors           = { version = "4", features = ["supports-colors"] }
+terminal_size        = "0.4"
+unicode-width        = "0.2"
+unicode-segmentation = "1.12"
+git2                 = { version = "0.19", default-features = false, features = ["vendored-libgit2"] }
+jiff                 = "0.1"
+anyhow               = "1"
+thiserror            = "1"
+tracing              = "0.1"
+tracing-subscriber   = { version = "0.3", features = ["env-filter", "fmt"] }
+uzers                = "0.12"
+once_cell            = "1"
+globset              = "0.4"
+rust-embed           = "8"
+
+[dev-dependencies]
+assert_cmd = "2"
+predicates = "3"
+insta      = { version = "1", features = ["yaml", "filters"] }
+tempfile   = "3"
+criterion  = { version = "0.5", features = ["html_reports"] }
+proptest   = "1"
+
+[[bench]]
+name = "lsc_benches"
+harness = false
+
+[profile.release]
+lto           = "thin"
+codegen-units = 1
+strip         = "symbols"
