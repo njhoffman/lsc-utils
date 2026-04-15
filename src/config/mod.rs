@@ -6,7 +6,12 @@
 //! `~/.config/lsc-utils/<name>.yaml` if present, mirroring colorls's behavior
 //! in `lib/colorls/yaml.rb`.
 
+pub mod icons;
 pub mod merge;
+pub mod theme;
+
+pub use icons::{IconKind, Icons, Resolved};
+pub use theme::{ActiveTheme, ColorMode, Rgb, Style, Theme};
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
