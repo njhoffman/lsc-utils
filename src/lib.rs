@@ -7,6 +7,7 @@ use anyhow::Result;
 pub mod cli;
 pub mod config;
 pub mod fs;
+pub mod git;
 pub mod options;
 pub mod render;
 pub mod util;
@@ -64,6 +65,12 @@ fn render_path(
     let mut sorted = entries;
     fs::sort::sort(&mut sorted, opts.sort);
 
+    let git_ctx = if opts.git_status && path.is_dir() {
+        git::GitContext::discover(path).unwrap_or(None)
+    } else {
+        None
+    };
+
     if matches!(opts.layout, options::LayoutMode::Long) {
         let (counts, _) = render::long::render(
             &sorted,
@@ -72,6 +79,7 @@ fn render_path(
             opts.color_mode,
             opts.show_icons,
             &opts.long,
+            git_ctx.as_ref(),
             out,
         )?;
         if let Some(kind) = opts.report {

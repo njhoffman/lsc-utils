@@ -15,6 +15,7 @@ use std::time::SystemTime;
 
 use crate::config::{ColorMode, IconKind, Icons, Theme};
 use crate::fs::{EntryKind, FileEntry};
+use crate::git::GitContext;
 use crate::options::LongOptions;
 use crate::util::{
     human::{self, SizeBucket},
@@ -26,6 +27,7 @@ use crate::util::{
 
 const MIN_SIZE_CHARS: usize = 4;
 
+#[allow(clippy::too_many_arguments)]
 pub fn render(
     entries: &[FileEntry],
     theme: &Theme,
@@ -33,6 +35,7 @@ pub fn render(
     color_mode: ColorMode,
     show_icons: bool,
     long: &LongOptions,
+    git: Option<&GitContext>,
     out: &mut dyn Write,
 ) -> io::Result<(ReportCounts, ColumnWidths)> {
     let widths = compute_widths(entries, long);
@@ -46,6 +49,7 @@ pub fn render(
             color_mode,
             show_icons,
             long,
+            git,
             &widths,
             now,
             &mut counts,
@@ -114,6 +118,7 @@ fn build_row(
     color_mode: ColorMode,
     show_icons: bool,
     long: &LongOptions,
+    git: Option<&GitContext>,
     widths: &ColumnWidths,
     now: SystemTime,
     counts: &mut ReportCounts,
@@ -161,6 +166,17 @@ fn build_row(
         theme,
         color_mode,
     ));
+    if let Some(ctx) = git {
+        let canonical = entry
+            .path
+            .canonicalize()
+            .unwrap_or_else(|_| entry.path.clone());
+        parts.push(crate::git::render_status(
+            ctx.flags_for(&canonical),
+            theme,
+            color_mode,
+        ));
+    }
 
     let mut row = parts.join("   ");
     let (icon_text, name_text, kind) =
@@ -353,6 +369,7 @@ mod tests {
             ColorMode::Never,
             true,
             &long_default(),
+            None,
             &mut buf,
         )
         .unwrap();
@@ -384,6 +401,7 @@ mod tests {
             ColorMode::Never,
             false,
             &long_default(),
+            None,
             &mut buf,
         )
         .unwrap();
@@ -409,6 +427,7 @@ mod tests {
             ColorMode::Never,
             false,
             &long_default(),
+            None,
             &mut buf,
         )
         .unwrap();
@@ -432,6 +451,7 @@ mod tests {
             ColorMode::Never,
             false,
             &long_default(),
+            None,
             &mut buf,
         )
         .unwrap();
@@ -459,6 +479,7 @@ mod tests {
             ColorMode::Never,
             false,
             &long,
+            None,
             &mut buf,
         )
         .unwrap();

@@ -22,6 +22,7 @@ pub struct RunOptions {
     pub long: LongOptions,
     pub report: Option<ReportKind>,
     pub indicator: IndicatorStyle,
+    pub git_status: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

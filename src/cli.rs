@@ -171,6 +171,10 @@ pub struct Args {
         conflicts_with = "sort_dirs"
     )]
     pub sort_files: bool,
+
+    /// Show git status for each entry
+    #[arg(long = "gs", visible_alias = "git-status")]
+    pub git_status: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -265,6 +269,7 @@ impl Args {
             long,
             report,
             indicator,
+            git_status: self.git_status,
         })
     }
 }
