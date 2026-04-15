@@ -1,0 +1,210 @@
+lsc(1) -- list directory contents with colors and icons
+========================================================
+
+## SYNOPSIS
+
+`lsc` [OPTION]... [FILE]...<br>
+
+## DESCRIPTION
+
+List information about the given FILEs (the current directory by default).
+
+`lsc` is a Rust reimplementation of the Ruby gem `colorls(1)`. It uses the
+same YAML data files for icons and color themes; user customisations under
+`~/.config/lsc-utils/` (mirroring `~/.config/colorls/`) are loaded at startup.
+
+By default the output is sorted alphabetically by name.
+
+## OPTIONS
+
+  * `-a`, `--all`:
+    Do not ignore entries starting with `.`. `.` and `..` are synthesised so
+    they participate in sorting and rendering.
+
+  * `-A`, `--almost-all`:
+    Do not list `.` and `..`, but do show other dotfiles.
+
+  * `-d`, `--dirs`:
+    Show only directories.
+
+  * `-f`, `--files`:
+    Show only files.
+
+  * `-1`:
+    List one entry per line. Default when stdout is not a terminal.
+
+  * `-x`:
+    List entries by lines (horizontal grid).
+
+  * `-C`:
+    List entries by columns (vertical grid). Default for terminals.
+
+  * `--format`=*WORD*:
+    Format selection: `across`, `horizontal`, `long`, `single-column`,
+    `vertical`.
+
+  * `-l`, `--long`:
+    Long listing: mode, hardlinks, owner, group, size, mtime, then icon
+    + name. Symlinks render with `\u2192` and a target path; dead links
+    are tagged `[Dead link]`.
+
+  * `-o`:
+    Long listing without the group column.
+
+  * `-g`:
+    Long listing without the owner column.
+
+  * `-G`, `--no-group`:
+    Suppress the group column in long listings.
+
+  * `-L`:
+    Follow symbolic links when listing.
+
+  * `--time-style`=*FORMAT*:
+    Time format. A leading `+` selects strftime; otherwise the default
+    asctime (`Wed Apr 15 02:34:56 2026`) is used.
+
+  * `--no-hardlinks`:
+    Hide the hard-link count in long listings.
+
+  * `--non-human-readable`:
+    Show file sizes in raw bytes instead of `1.50 KiB`-style units.
+
+  * `-i`, `--inode`:
+    Show inode numbers.
+
+  * `--report`[=*WORD*]:
+    Print a summary at the end. `short` (the default when bare) prints
+    a single-line `Folders: M, Files: N` line; `long` prints the
+    multi-line tally.
+
+  * `-p`, `--indicator-style`[=*STYLE*]:
+    Append a trailing indicator. `slash` (default) appends `/` to
+    directories; `none` disables.
+
+  * `--hyperlink`[=*WHEN*]:
+    Wrap entry names in OSC-8 terminal hyperlinks when the terminal
+    supports them. *WHEN* is `always`, `auto`, or `never`. Bare flag
+    defaults to `always`.
+
+  * `--without-icons`:
+    Hide the nerd-font icon column. Use this on terminals without a
+    nerd font installed.
+
+  * `-h`, `--human-readable`:
+    No-op for ls compatibility (lsc is human-readable by default).
+
+  * `-t`:
+    Sort by modification time, newest first.
+
+  * `-U`:
+    Do not sort; preserve directory order.
+
+  * `-S`:
+    Sort by size, largest first.
+
+  * `-X`:
+    Sort by file extension.
+
+  * `--sort`=*WORD*:
+    Sort key: `name`, `size`, `time`, `extension`, `none`.
+
+  * `-r`, `--reverse`:
+    Reverse the sort order.
+
+  * `--sd`, `--sort-dirs`, `--group-directories-first`:
+    Group directories before files.
+
+  * `--sf`, `--sort-files`:
+    Group files before directories.
+
+  * `--gs`, `--git-status`:
+    In long mode, append a 4-character git status column. `?` untracked,
+    `A` added, `M` modified, `D` deleted, `R` renamed; clean shows
+    `\u2713`. Directory rows aggregate descendants. Requires the path
+    to be inside a git repository; otherwise the column is omitted
+    silently.
+
+  * `--tree`[=*DEPTH*]:
+    Show a recursive tree view. Bare flag is unlimited depth; with
+    *DEPTH* the descent stops after that many levels. Cycle-safe via a
+    `(dev, inode)` visited set; capped at 256 levels of recursion.
+
+  * `--color`[=*WHEN*]:
+    Colorize output. *WHEN* is `always`, `auto` (default), or `never`.
+    `auto` honors `NO_COLOR`, `CLICOLOR`, `CLICOLOR_FORCE`, `TERM=dumb`,
+    and stdout TTY status.
+
+  * `--dark`:
+    Use the dark color theme (the default).
+
+  * `--light`:
+    Use the light color theme.
+
+  * `--help`:
+    Print help.
+
+  * `--version`:
+    Print the lsc version.
+
+## CONFIGURATION
+
+`lsc` ships bundled defaults for six YAML tables (themes plus icon
+mappings), copied verbatim from colorls 1.5.0. User overrides are loaded
+from:
+
+  * `$XDG_CONFIG_HOME/lsc-utils/<file>.yaml` (or
+    `~/.config/lsc-utils/<file>.yaml` if `XDG_CONFIG_HOME` is unset)
+
+The recognized files mirror colorls so a working `~/.config/colorls/`
+config drops in unchanged when copied to `~/.config/lsc-utils/`:
+`dark_colors.yaml`, `light_colors.yaml`, `files.yaml`,
+`file_aliases.yaml`, `folders.yaml`, `folder_aliases.yaml`.
+
+## ENVIRONMENT
+
+  * `DEBUG`:
+    When set to `1`, emit tracing diagnostic output to stderr.
+    `RUST_LOG` (if set) controls the filter level; otherwise defaults
+    to `debug`.
+
+  * `COLUMNS`:
+    Override terminal width detection. Useful for deterministic test
+    output and piping into pagers.
+
+  * `NO_COLOR`, `CLICOLOR`, `CLICOLOR_FORCE`, `TERM`:
+    Influence `--color=auto` behavior per the no-color.org and
+    bixense.com/clicolors conventions.
+
+  * `XDG_CONFIG_HOME`:
+    Locates the user config directory (see CONFIGURATION).
+
+## EXAMPLES
+
+  * Show the current directory in vertical grid:
+
+    `lsc`
+
+  * Long listing including hidden entries with git status:
+
+    `lsc -al --gs`
+
+  * Two-deep tree of `src/`:
+
+    `lsc --tree=2 src`
+
+  * Sort by size descending, directories first:
+
+    `lsc -lS --sd`
+
+  * Pipe-safe one-per-line with hyperlinks for the calling terminal:
+
+    `lsc -1 --hyperlink=auto`
+
+## SEE ALSO
+
+`ls(1)`, `colorls(1)`, `tree(1)`
+
+## AUTHOR
+
+Written by Nick Hoffman, based on the colorls Ruby gem by Athitya Kumar.
