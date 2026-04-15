@@ -10,7 +10,9 @@ use anyhow::{anyhow, Result};
 use clap::{Parser, ValueEnum};
 
 use crate::config::{ActiveTheme, ColorMode};
-use crate::options::{Filter, IndicatorStyle, LayoutMode, LongOptions, RunOptions};
+use crate::options::{
+    Filter, Group, IndicatorStyle, LayoutMode, LongOptions, RunOptions, SortKey, SortSpec,
+};
 use crate::util::report::ReportKind;
 use crate::util::time_fmt::TimeStyle;
 
@@ -127,6 +129,48 @@ pub struct Args {
     /// compatibility, since lsc is human-readable by default).
     #[arg(short = 'h', long = "human-readable", hide = true)]
     pub _human: bool,
+
+    /// Sort by modification time (newest first)
+    #[arg(short = 't', conflicts_with_all = ["sort_size", "sort_extension", "sort_none", "sort"])]
+    pub sort_time: bool,
+
+    /// Do not sort; use directory order
+    #[arg(short = 'U', conflicts_with_all = ["sort_size", "sort_extension", "sort_time", "sort"])]
+    pub sort_none: bool,
+
+    /// Sort by file size (largest first)
+    #[arg(short = 'S', conflicts_with_all = ["sort_time", "sort_extension", "sort_none", "sort"])]
+    pub sort_size: bool,
+
+    /// Sort by file extension
+    #[arg(short = 'X', conflicts_with_all = ["sort_time", "sort_size", "sort_none", "sort"])]
+    pub sort_extension: bool,
+
+    /// Sort key: name, size, time, extension, none
+    #[arg(long = "sort", value_name = "WORD",
+        conflicts_with_all = ["sort_time", "sort_size", "sort_extension", "sort_none"])]
+    pub sort: Option<String>,
+
+    /// Reverse sort order
+    #[arg(short = 'r', long = "reverse")]
+    pub reverse: bool,
+
+    /// Group directories before files
+    #[arg(
+        long = "sd",
+        visible_alias = "sort-dirs",
+        visible_alias = "group-directories-first",
+        conflicts_with = "sort_files"
+    )]
+    pub sort_dirs: bool,
+
+    /// Group files before directories
+    #[arg(
+        long = "sf",
+        visible_alias = "sort-files",
+        conflicts_with = "sort_dirs"
+    )]
+    pub sort_files: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum)]
@@ -164,6 +208,7 @@ impl Args {
             Some(ColorArg::Always) => ColorMode::Always,
             Some(ColorArg::Never) => ColorMode::Never,
         };
+        let sort = resolve_sort(&self)?;
         let paths = if self.paths.is_empty() {
             vec![PathBuf::from(".")]
         } else {
@@ -213,6 +258,7 @@ impl Args {
                 only_dirs: self.dirs,
                 only_files: self.files,
             },
+            sort,
             show_icons: !self.without_icons,
             theme,
             color_mode,
@@ -221,6 +267,45 @@ impl Args {
             indicator,
         })
     }
+}
+
+fn resolve_sort(a: &Args) -> Result<SortSpec> {
+    let key = if a.sort_time {
+        SortKey::Time
+    } else if a.sort_size {
+        SortKey::Size
+    } else if a.sort_extension {
+        SortKey::Extension
+    } else if a.sort_none {
+        SortKey::None
+    } else if let Some(s) = a.sort.as_deref() {
+        match s {
+            "name" => SortKey::Name,
+            "size" => SortKey::Size,
+            "time" => SortKey::Time,
+            "extension" => SortKey::Extension,
+            "none" => SortKey::None,
+            other => {
+                return Err(anyhow!(
+                    "--sort: expected name|size|time|extension|none, got `{other}`"
+                ))
+            }
+        }
+    } else {
+        SortKey::Name
+    };
+    let group = if a.sort_dirs {
+        Group::DirsFirst
+    } else if a.sort_files {
+        Group::FilesFirst
+    } else {
+        Group::Mixed
+    };
+    Ok(SortSpec {
+        key,
+        reverse: a.reverse,
+        group,
+    })
 }
 
 fn resolve_layout(a: &Args) -> Result<LayoutMode> {

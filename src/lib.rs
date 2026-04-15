@@ -61,10 +61,8 @@ fn render_path(
         vec![fs::entry::from_user_path(path)?]
     };
 
-    // Step 4 sort: stable name order (case-sensitive, ASCII-ish). Locale-aware
-    // sorting + the full --sort matrix land in step 6.
     let mut sorted = entries;
-    sorted.sort_by(|a, b| a.name.cmp(&b.name));
+    fs::sort::sort(&mut sorted, opts.sort);
 
     if matches!(opts.layout, options::LayoutMode::Long) {
         let (counts, _) = render::long::render(

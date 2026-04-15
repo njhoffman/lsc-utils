@@ -15,12 +15,39 @@ pub struct RunOptions {
     pub paths: Vec<PathBuf>,
     pub layout: LayoutMode,
     pub filter: Filter,
+    pub sort: SortSpec,
     pub show_icons: bool,
     pub theme: ActiveTheme,
     pub color_mode: ColorMode,
     pub long: LongOptions,
     pub report: Option<ReportKind>,
     pub indicator: IndicatorStyle,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SortKey {
+    #[default]
+    Name,
+    Size,
+    Time,
+    Extension,
+    /// `-U`: do not sort; preserve directory order.
+    None,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Group {
+    #[default]
+    Mixed,
+    DirsFirst,
+    FilesFirst,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SortSpec {
+    pub key: SortKey,
+    pub reverse: bool,
+    pub group: Group,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
