@@ -1,5 +1,7 @@
 use std::process::ExitCode;
 
+pub mod config;
+
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn run_from_env() -> ExitCode {
